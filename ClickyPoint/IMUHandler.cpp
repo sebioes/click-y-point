@@ -1,6 +1,6 @@
 #include "IMUHandler.h"
 
-IMUHandler::IMUHandler() : imuData{0.0f, 0.0f, 0.0f, 0.0f} {}
+IMUHandler::IMUHandler() : imuData{0.0f, 0.0f, 0.0f,} {}
 
 bool IMUHandler::initialize() {
     auto imu_type = M5.Imu.getType();
@@ -17,7 +17,7 @@ bool IMUHandler::update() {
         imuData.gyro_x = data.gyro.x;
         imuData.gyro_y = data.gyro.y;
         imuData.gyro_z = data.gyro.z;
-        imuData.accel_x = data.accel.x;
+        Serial.printf("gyro_x:%4.2f,gyro_y:%4.2f,gyro_z:%4.2f\n", data.gyro.x, data.gyro.y, data.gyro.z);
         return true;
     }
 return false;

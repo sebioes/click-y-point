@@ -10,17 +10,32 @@ const ToneDuration Application::disconnectMelody[] = {
 
 const ToneDuration Application::resetCursorMelody[] = {{100, 50}};
 
-unsigned long lastDebounceTime = 0;
-const uint16_t debounceDelay = 100;
+unsigned long leftClickLastDebounceTime = 0;
+const uint16_t leftClickDebounceDelay = 100;
 bool leftClickPressed = false;
 
-unsigned long arrowLastDebounce = 0;
-const uint16_t arrowDebounceDelay = 400;
-bool rightArrowTriggered = false;
-bool leftArrowTriggered = false;
-uint8_t arrowIterationCount = 0;
-const uint8_t maxArrowIterations = 50;
-const float arrowSensitivity = 1.0; 
+// Cooldown settings
+const uint16_t cooldownDuration = 500; // milliseconds
+unsigned long cooldownStartTime = 0;
+bool inCooldown = false;
+
+// Gesture detection settings
+const uint16_t maxIterations = 80;
+
+// Left arrow thresholds
+const float leftInitialThreshold = -400.0;
+const float leftFinalThreshold = 300.0;
+
+// Right arrow thresholds
+const float rightInitialThreshold = 700.0;
+const float rightFinalThreshold = 400.0;
+
+// Variables to track gesture progress
+bool leftInitialDetected = false;
+uint16_t leftIterationCount = 0;
+
+bool rightInitialDetected = false;
+uint16_t rightIterationCount = 0;
 
 // Define the sound sequences
 const SoundSequence Application::connectSequence = {
@@ -67,52 +82,77 @@ void Application::loop() {
   M5.update();
   unsigned long currentTime = millis();
   // Handle IMU data
-  if (imuHandler.update()) {
+  if (imuHandler.update() && bleHandler.isConnected()) {
     IMUData data = imuHandler.getData();
 
     if (presentationMode) {
-      if (arrowIterationCount > maxArrowIterations) {
-        rightArrowTriggered = false;
-        leftArrowTriggered = false;
-        arrowIterationCount = 0;
-      }
+      float gyro_y = data.gyro_y;
 
-      if (!rightArrowTriggered && !leftArrowTriggered && data.accel_x <= - arrowSensitivity) {
-        rightArrowTriggered = true;
-        arrowIterationCount = 0; // Start counting iterations
-      }
-
-      // Check for left arrow condition
-      if (!leftArrowTriggered && !leftArrowTriggered && data.accel_x >= arrowSensitivity) {
-        leftArrowTriggered = true;
-        arrowIterationCount = 0; // Start counting iterations
-      }
-
-      // If rightArrowTriggered, monitor for return to < -0.1
-      if (rightArrowTriggered) {
-        arrowIterationCount++;
-        if (data.accel_x > -0.1 && arrowIterationCount <= maxArrowIterations && currentTime - arrowLastDebounce > arrowDebounceDelay) {
-          Serial.println("Right Arrow Triggered");
-          bleHandler.write(0xD7); // Trigger right arrow
-          rightArrowTriggered = false;
-          arrowIterationCount = 0;
-          arrowLastDebounce = currentTime;
+      // --------- Cooldown Management ---------
+      if (inCooldown) {
+        if (currentTime - cooldownStartTime > cooldownDuration) {
+          inCooldown = false;
+          Serial.println("Cooldown ended");
         }
       }
 
-      // If leftArrowTriggered, monitor for return to > 0.1
-      if (leftArrowTriggered) {
-        arrowIterationCount++;
-        if (data.accel_x < 0.1 || arrowIterationCount <= maxArrowIterations && currentTime - arrowLastDebounce > arrowDebounceDelay) {
-          Serial.println("Left Arrow Triggered");
-          bleHandler.write(0xD8); // Trigger left arrow
-          leftArrowTriggered = false;
-          arrowIterationCount = 0;
-          arrowLastDebounce = currentTime;
+      // If not in cooldown, proceed to detect gestures
+      if (!inCooldown) {
+        // --------- Left Arrow Detection ---------
+        if (!leftInitialDetected) {
+          if (gyro_y <= leftInitialThreshold) {
+            leftInitialDetected = true;
+            leftIterationCount = 0;
+            Serial.println("Left arrow: Initial threshold detected");
+          }
+        } else {
+          leftIterationCount++;
+          if (gyro_y >= leftFinalThreshold) {
+            // Trigger left arrow
+            bleHandler.write(0xD8);
+            Serial.println("Left arrow triggered");
+            inCooldown = true;
+            cooldownStartTime = currentTime;
+
+            // Reset detection
+            leftInitialDetected = false;
+            leftIterationCount = 0;
+          } else if (leftIterationCount >= maxIterations) {
+            // Timeout
+            leftInitialDetected = false;
+            leftIterationCount = 0;
+            Serial.println("Left arrow: Timeout");
+          }
+        }
+
+        // --------- Right Arrow Detection ---------
+        if (!rightInitialDetected) {
+          if (gyro_y >= rightInitialThreshold) {
+            rightInitialDetected = true;
+            rightIterationCount = 0;
+            Serial.println("Right arrow: Initial threshold detected");
+          }
+        } else {
+          rightIterationCount++;
+          if (gyro_y <= rightFinalThreshold) {
+            // Trigger right arrow
+            bleHandler.write(0xD7);
+            Serial.println("Right arrow triggered");
+            inCooldown = true;
+            cooldownStartTime = currentTime;
+
+            // Reset detection
+            rightInitialDetected = false;
+            rightIterationCount = 0;
+          } else if (rightIterationCount >= maxIterations) {
+            // Timeout
+            rightInitialDetected = false;
+            rightIterationCount = 0;
+            Serial.println("Right arrow: Timeout");
+          }
         }
       }
     } else {
-
       static unsigned long previousTime = currentTime;
       unsigned long deltaMs = currentTime - previousTime;
       previousTime = currentTime;
@@ -128,10 +168,7 @@ void Application::loop() {
           static_cast<int8_t>(-data.gyro_x * deltaMs * 35.0f / 1000.0f);
 
       // Send movement if connected and movement exists
-      if (bleHandler.isConnected()) {
-        ledController.setBrightness(100);
-        bleHandler.move(movement_x, movement_y);
-      }
+      bleHandler.move(movement_x, movement_y);
     }
   }
 
@@ -167,16 +204,16 @@ void Application::loop() {
     presentationMode = !presentationMode;
   }
   if (digitalRead(26) == LOW) { // Button is pressed
-    if (!leftClickPressed && (currentTime - lastDebounceTime) > debounceDelay) {
+    if (!leftClickPressed && (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
       bleHandler.press(1); // Hold left click
       leftClickPressed = true;
-      lastDebounceTime = currentTime;
+      leftClickLastDebounceTime = currentTime;
     }
   } else { // Button is released
-    if (leftClickPressed && (currentTime - lastDebounceTime) > debounceDelay) {
+    if (leftClickPressed && (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
       bleHandler.release(1); // Release left click
       leftClickPressed = false;
-      lastDebounceTime = currentTime;
+      leftClickLastDebounceTime = currentTime;
     }
   }
 

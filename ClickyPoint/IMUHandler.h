@@ -7,7 +7,6 @@ struct IMUData {
     float gyro_x;
     float gyro_y;
     float gyro_z;
-    float accel_x;
 };
 
 class IMUHandler {
