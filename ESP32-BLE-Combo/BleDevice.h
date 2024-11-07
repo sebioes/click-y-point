@@ -104,7 +104,7 @@ public:
 
   // mouse specific
   void click(uint8_t b = MOUSE_LEFT);
-  void move(signed char x, signed char y, signed char wheel = 0, signed char hWheel = 0);
+  void move(int8_t x, int8_t y, signed char wheel = 0, signed char hWheel = 0);
   void setPosition(uint16_t x, uint16_t y, uint16_t width, uint16_t height); // Absolute movement
   void mousePress(uint8_t b = MOUSE_LEFT);   // press LEFT by default
   void mouseRelease(uint8_t b = MOUSE_LEFT); // release LEFT by default

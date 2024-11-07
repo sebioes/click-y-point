@@ -61,7 +61,7 @@ void BleDevice::begin(bool _enableMouse, bool _enableKeyboard)
 	onStarted(pServer);
 
 	BLEAdvertising* advertising = pServer->getAdvertising();
-	uint8_t icon = enableMouse && enableKeyboard ? GENERIC_HID : (enableMouse ? HID_MOUSE : HID_KEYBOARD);
+	uint8_t icon = HID_MOUSE;
 	advertising->setAppearance(icon); 
 	if( enableMouse )
 		advertising->addServiceUUID(hid_mouse->hidService()->getUUID());
@@ -326,7 +326,7 @@ void BleDevice::click(uint8_t b)
 	move(0,0,0,0);
 }
 
-void BleDevice::move(signed char x, signed char y, signed char wheel, signed char hWheel)
+void BleDevice::move(int8_t x, int8_t y, signed char wheel, signed char hWheel)
 {
   if( !(enableMouse && connected) ) return;
   {
@@ -350,10 +350,10 @@ void BleDevice::setPosition(uint16_t x, uint16_t y, uint16_t width, uint16_t hei
 
     uint8_t m[5];
     m[0] = _buttons;      // Button states
-    m[1] = _x;            // Low byte of X position
-    m[2] = (_x >> 8);     // High byte of X position
-    m[3] = _y;            // Low byte of Y position
-    m[4] = (_y >> 8);     // High byte of Y position
+    m[1] = (_x & 0xFF);            // Low byte of X position
+    m[2] = (_x >> 8) & 0xFF;     // High byte of X position
+    m[3] = (_y & 0xFF);            // Low byte of Y position
+    m[4] = (_y >> 8) & 0xFF;     // High byte of Y position
 
     // Send as an absolute positioning report
     this->inputMouseAbsolute->setValue((uint8_t*)m, sizeof(m));
