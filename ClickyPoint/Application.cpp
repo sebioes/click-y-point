@@ -49,7 +49,7 @@ const SoundSequence Application::resetCursorSequence = {
 
 Application::Application()
     : bleHandler("Click y Point", "Click y Point", 1920, 1080), posToggle(true),
-      wasConnected(true), presentationMode(false) {}
+      wasConnected(true), presentationMode(false), rotaryHandler(33, 32, 0) {}
 
 void Application::setup() {
   // Initialize M5
@@ -76,6 +76,9 @@ void Application::setup() {
 
   // Initialize BLE
   bleHandler.begin();
+
+  // Initialize the rotary encoder
+  rotaryHandler.initialize();
 }
 
 void Application::loop() {
@@ -219,4 +222,17 @@ void Application::loop() {
 
   // Update sound manager
   soundManager.update();
+
+  // Update rotary encoder
+  rotaryHandler.update();
+    
+  if (rotaryHandler.hasRotated()) {
+        int32_t pos = rotaryHandler.getPosition();
+        Serial.printf("Rotary position: %d\n", pos);
+    }
+    
+  if (rotaryHandler.isButtonPressed()) {
+    Serial.println("Rotary button pressed");
+  }
+
 }

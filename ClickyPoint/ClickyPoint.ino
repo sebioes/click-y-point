@@ -6,6 +6,7 @@
 #include "LEDController.h"
 #include "SoundManager.h"
 #include "Application.h"
+#include "RotaryHandler.h"
 
 // Instantiate the Application
 Application app;

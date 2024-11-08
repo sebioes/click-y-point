@@ -5,6 +5,7 @@
 #include "BLEHandler.h"
 #include "LEDController.h"
 #include "SoundManager.h"
+#include "RotaryHandler.h"
 
 struct SoundSequence; // Forward declaration
 
@@ -19,7 +20,7 @@ private:
     BLEHandler bleHandler;
     LEDController ledController;
     SoundManager soundManager;
-
+    RotaryHandler rotaryHandler;
     // Position Toggle
     bool posToggle;
 
