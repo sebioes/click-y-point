@@ -77,7 +77,7 @@ void Application::togglePresentationMode() {
 
 void Application::resetCursor() {
     if (bleHandler.isConnected()) {
-        // soundManager.playSoundSequence(&resetCursorSequence); // TODO: Add sound
+        soundManager.playSoundSequence(&resetCursorSequence);
         bleHandler.setPosition(960, 540);
     }
 }
@@ -263,7 +263,7 @@ void Application::loop() {
   ledController.update();
 
   // Handle button press
-  if (M5.BtnPWR.wasPressed() && bleHandler.isConnected()) {
+   if (M5.BtnPWR.wasPressed() && bleHandler.isConnected()) {
     soundManager.playSoundSequence(&resetCursorSequence);
     if (posToggle) {
       bleHandler.setPosition(960, 540);

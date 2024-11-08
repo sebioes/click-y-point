@@ -35,16 +35,16 @@ void DisplayManager::printIMUData(float gx, float gy, float gz) {
 
 void DisplayManager::printMenuItems(const char** items, size_t count, size_t currentIndex) {
     clear();
-    StickCP2.Display.setTextColor(GREEN);
+    StickCP2.Display.setTextColor(WHITE);
     
     const int lineHeight = 20;
     const int startY = 20;
     
     for (size_t i = 0; i < count; i++) {
         if (i == currentIndex) {
-            StickCP2.Display.setTextColor(WHITE);  // Highlight selected item
+            StickCP2.Display.setTextColor(GREEN);  // Highlight selected item
         } else {
-            StickCP2.Display.setTextColor(GREEN);
+            StickCP2.Display.setTextColor(WHITE);
         }
         
         StickCP2.Display.setCursor(10, startY + i * lineHeight);
