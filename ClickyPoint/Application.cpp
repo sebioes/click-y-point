@@ -78,7 +78,13 @@ void Application::togglePresentationMode() {
 void Application::resetCursor() {
     if (bleHandler.isConnected()) {
         soundManager.playSoundSequence(&resetCursorSequence);
-        bleHandler.setPosition(960, 540);
+        // bleHandler.setPosition(960, 540);
+    if (posToggle) {
+      bleHandler.setPosition(960, 540);
+    } else {
+      bleHandler.setPosition(961, 541);
+    }
+    posToggle = !posToggle;
     }
 }
 
@@ -263,17 +269,8 @@ void Application::loop() {
   ledController.update();
 
   // Handle button press
-   if (M5.BtnPWR.wasPressed() && bleHandler.isConnected()) {
-    soundManager.playSoundSequence(&resetCursorSequence);
-    if (posToggle) {
-      bleHandler.setPosition(960, 540);
-    } else {
-      bleHandler.setPosition(961, 541);
-    }
-    posToggle = !posToggle;
-  }
-  if (M5.BtnA.wasPressed()) {
-    presentationMode = !presentationMode;
+   if (M5.BtnPWR.wasPressed()) {
+    resetCursor();
   }
   if (digitalRead(26) == LOW) { // Button is pressed
     if (!leftClickPressed && (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
