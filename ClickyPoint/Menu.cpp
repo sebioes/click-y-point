@@ -1,52 +1,66 @@
-#ifndef MENU_H
-#define MENU_H
+#include "Menu.h"
 
-#include <functional>
-#include <vector>
-#include <string>
+// MenuItem implementation
+MenuItem::MenuItem(std::string label, std::function<void()> act)
+    : staticLabel(std::move(label)), action(std::move(act)), isDynamic(false) {}
 
-class IMenu {
-public:
-    virtual ~IMenu() = default;
-    virtual void next() = 0;
-    virtual void previous() = 0;
-    virtual void select() = 0;
-    virtual std::string getCurrentLabel() const = 0;
-    virtual size_t size() const = 0;
-    virtual std::vector<std::string> getAllLabels() const = 0;
-    virtual size_t getCurrentIndex() const = 0;
-};
+MenuItem::MenuItem(std::function<std::string()> labelFunc, std::function<void()> act)
+    : dynamicLabel(std::move(labelFunc)), action(std::move(act)), isDynamic(true) {}
 
-class Menu : public IMenu {
-public:
-    Menu();
-    
-    // Add menu items
-    void addItem(const std::string& label, std::function<void()> action = nullptr);
-    void addItem(std::function<std::string()> labelProvider, std::function<void()> action = nullptr);
-    
-    // IMenu implementation
-    void next() override;
-    void previous() override;
-    void select() override;
-    std::string getCurrentLabel() const override;
-    size_t size() const override;
-    std::vector<std::string> getAllLabels() const override;
-    size_t getCurrentIndex() const override { return currentIndex; }
+std::string MenuItem::getLabel() const {
+    return isDynamic ? dynamicLabel() : staticLabel;
+}
 
-private:
-    struct MenuItem {
-        std::string staticLabel;
-        std::function<std::string()> dynamicLabel;
-        std::function<void()> action;
-        bool isDynamic;
-        
-        MenuItem(std::string label, std::function<void()> act);
-        MenuItem(std::function<std::string()> labelFunc, std::function<void()> act);
-    };
+void MenuItem::select() const {
+    if (action) action();
+}
 
-    std::vector<MenuItem> items;
-    size_t currentIndex;
-};
+// Menu implementation
+Menu::Menu() : currentIndex(0) {}
 
-#endif 
+void Menu::addItem(const std::string& label, std::function<void()> action) {
+    items.emplace_back(label, action);
+}
+
+void Menu::addItem(std::function<std::string()> labelProvider, std::function<void()> action) {
+    items.emplace_back(labelProvider, action);
+}
+
+void Menu::next() {
+    if (!items.empty()) {
+        currentIndex = (currentIndex + 1) % items.size();
+    }
+}
+
+void Menu::previous() {
+    if (!items.empty()) {
+        currentIndex = (currentIndex + items.size() - 1) % items.size();
+    }
+}
+
+void Menu::select() {
+    if (!items.empty()) {
+        items[currentIndex].select();
+    }
+}
+
+std::string Menu::getCurrentLabel() const {
+    return !items.empty() ? items[currentIndex].getLabel() : "";
+}
+
+size_t Menu::size() const {
+    return items.size();
+}
+
+std::vector<std::string> Menu::getAllLabels() const {
+    std::vector<std::string> labels;
+    labels.reserve(items.size());
+    for (const auto& item : items) {
+        labels.push_back(item.getLabel());
+    }
+    return labels;
+}
+
+size_t Menu::getCurrentIndex() const {
+    return currentIndex;
+} 

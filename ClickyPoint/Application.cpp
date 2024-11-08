@@ -70,15 +70,13 @@ void Application::setupMenu() {
 
 void Application::togglePresentationMode() {
     presentationMode = !presentationMode;
-    size_t count;
-    const char** labels = menu.getAllLabels(count);
-    displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
 }
 
 void Application::resetCursor() {
     if (bleHandler.isConnected()) {
         soundManager.playSoundSequence(&resetCursorSequence);
-        // bleHandler.setPosition(960, 540);
     if (posToggle) {
       bleHandler.setPosition(960, 540);
     } else {
@@ -105,9 +103,8 @@ void Application::updateMenu() {
         lastRotaryPosition = rotaryHandler.getPosition();
         
         // Update display with all menu items
-        size_t count;
-        const char** labels = menu.getAllLabels(count);
-        displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
+        auto labels = menu.getAllLabels();
+        displayManager.printMenuItems(labels, menu.getCurrentIndex());
     }
     
     if (rotaryHandler.isButtonPressed()) {
@@ -151,9 +148,8 @@ void Application::setup() {
   setupMenu();
 
   // Show initial menu items
-  size_t count;
-  const char** labels = menu.getAllLabels(count);
-  displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
+  auto labels = menu.getAllLabels();
+  displayManager.printMenuItems(labels, menu.getCurrentIndex());
 }
 
 void Application::loop() {

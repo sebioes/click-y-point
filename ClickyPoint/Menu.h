@@ -3,76 +3,50 @@
 
 #include <functional>
 #include <vector>
+#include <string>
+
+class IMenu {
+public:
+    virtual ~IMenu() = default;
+    virtual void next() = 0;
+    virtual void previous() = 0;
+    virtual void select() = 0;
+    virtual std::string getCurrentLabel() const = 0;
+    virtual size_t size() const = 0;
+    virtual std::vector<std::string> getAllLabels() const = 0;
+    virtual size_t getCurrentIndex() const = 0;
+};
 
 class MenuItem {
 public:
-    MenuItem(std::function<const char*()> labelFunc, std::function<void()> selectFunc)
-        : dynamicLabel(labelFunc), selectCallback(selectFunc), staticLabel(nullptr) {}
+    MenuItem(std::string label, std::function<void()> act);
+    MenuItem(std::function<std::string()> labelFunc, std::function<void()> act);
     
-    MenuItem(const char* label, std::function<void()> selectFunc)
-        : staticLabel(label), selectCallback(selectFunc) {}
-
-    const char* getLabel() const {
-        return dynamicLabel ? dynamicLabel() : staticLabel;
-    }
-
-    void select() {
-        if (selectCallback) selectCallback();
-    }
+    std::string getLabel() const;
+    void select() const;
 
 private:
-    std::function<const char*()> dynamicLabel;
-    std::function<void()> selectCallback;
-    const char* staticLabel;
+    std::string staticLabel;
+    std::function<std::string()> dynamicLabel;
+    std::function<void()> action;
+    bool isDynamic;
 };
 
-class Menu {
+class Menu : public IMenu {
 public:
-    Menu() : currentIndex(0) {}
-
-    void addItem(std::function<const char*()> labelFunc, std::function<void()> selectFunc) {
-        items.emplace_back(labelFunc, selectFunc);
-    }
-
-    void addItem(const char* label, std::function<void()> selectFunc) {
-        items.emplace_back(label, selectFunc);
-    }
-
-    void next() {
-        if (!items.empty()) {
-            currentIndex = (currentIndex + 1) % items.size();
-        }
-    }
-
-    void previous() {
-        if (!items.empty()) {
-            currentIndex = (currentIndex + items.size() - 1) % items.size();
-        }
-    }
-
-    void select() {
-        if (!items.empty()) {
-            items[currentIndex].select();
-        }
-    }
-
-    const char** getAllLabels(size_t& count) const {
-        count = items.size();
-        if (count == 0) return nullptr;
-
-        static std::vector<const char*> labels;
-        labels.resize(count);
-        
-        for (size_t i = 0; i < count; i++) {
-            labels[i] = items[i].getLabel();
-        }
-        
-        return labels.data();
-    }
-
-    size_t getCurrentIndex() const {
-        return currentIndex;
-    }
+    Menu();
+    
+    void addItem(const std::string& label, std::function<void()> action = nullptr);
+    void addItem(std::function<std::string()> labelProvider, std::function<void()> action = nullptr);
+    
+    // IMenu implementation
+    void next() override;
+    void previous() override;
+    void select() override;
+    std::string getCurrentLabel() const override;
+    size_t size() const override;
+    std::vector<std::string> getAllLabels() const override;
+    size_t getCurrentIndex() const override;
 
 private:
     std::vector<MenuItem> items;
