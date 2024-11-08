@@ -52,6 +52,61 @@ Application::Application()
     : bleHandler("Click y Point", "Click y Point", 1920, 1080), posToggle(true),
       wasConnected(true), presentationMode(false), rotaryHandler(33, 32, 0) {}
 
+void Application::setupMenu() {
+    // Add menu item with dynamic label for presentation mode
+    menu.addItem(
+        [this]() -> const char* {
+            return presentationMode ? "Mode: Presentation" : "Mode: Normal";
+        },
+        [this]() { 
+            togglePresentationMode(); 
+        }
+    );
+    
+    // Add static menu items
+    menu.addItem("Reset Cursor", [this]() { resetCursor(); });
+    menu.addItem("Show IMU Data", [this]() { showIMUData(); });
+}
+
+void Application::togglePresentationMode() {
+    presentationMode = !presentationMode;
+    displayManager.printText(presentationMode ? "Mode: Presentation" : "Mode: Normal");
+}
+
+void Application::resetCursor() {
+    if (bleHandler.isConnected()) {
+        // soundManager.playSoundSequence(&resetCursorSequence); // TODO: Add sound
+        bleHandler.setPosition(960, 540);
+    }
+}
+
+void Application::showIMUData() {
+    if (imuHandler.update()) {
+        IMUData data = imuHandler.getData();
+        displayManager.printIMUData(data.gyro_x, data.gyro_y, data.gyro_z);
+    }
+}
+
+void Application::updateMenu() {
+    if (rotaryHandler.hasRotated()) {
+        if (rotaryHandler.getPosition() > lastRotaryPosition) {
+            menu.next();
+        } else {
+            menu.previous();
+        }
+        lastRotaryPosition = rotaryHandler.getPosition();
+        
+        // Update display with all menu items
+        size_t count;
+        const char** labels = menu.getAllLabels(count);
+        displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
+    }
+    
+    if (rotaryHandler.isButtonPressed()) {
+        menu.select();
+    }
+}
+
 void Application::setup() {
   // Initialize M5
   auto cfg = M5.config();
@@ -83,6 +138,14 @@ void Application::setup() {
 
   // Initialize Display Manager
   displayManager.begin();
+
+  // Initialize the menu
+  setupMenu();
+
+  // Show initial menu items
+  size_t count;
+  const char** labels = menu.getAllLabels(count);
+  displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
 }
 
 void Application::loop() {
@@ -227,19 +290,7 @@ void Application::loop() {
   // Update sound manager
   soundManager.update();
 
-  // Update rotary encoder
+  // Update rotary encoder and menu
   rotaryHandler.update();
-    
-  if (rotaryHandler.hasRotated()) {
-        int32_t pos = rotaryHandler.getPosition();
-        Serial.printf("Rotary position: %d\n", pos);
-        // displayManager.printText("Rotary position: ");
-        // displayManager.printText(String(pos).c_str());
-    }
-    
-  if (rotaryHandler.isButtonPressed()) {
-    Serial.println("Rotary button pressed");
-    displayManager.printText("Rotary button pressed");
-  }
-
+  updateMenu();
 }

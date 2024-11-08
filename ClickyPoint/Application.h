@@ -1,13 +1,13 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "IMUHandler.h"
 #include "BLEHandler.h"
-#include "LEDController.h"
+#include "IMUHandler.h"
 #include "SoundManager.h"
+#include "LEDController.h"
 #include "RotaryHandler.h"
 #include "DisplayManager.h"
-struct SoundSequence; // Forward declaration
+#include "Menu.h"
 
 class Application {
 public:
@@ -16,23 +16,14 @@ public:
     void loop();
 
 private:
-    IMUHandler imuHandler;
-    BLEHandler bleHandler;
-    LEDController ledController;
-    SoundManager soundManager;
-    RotaryHandler rotaryHandler;
-    DisplayManager displayManager;
-    
-    // Position Toggle
-    bool posToggle;
+    // Methods
+    void setupMenu();
+    void togglePresentationMode();
+    void resetCursor();
+    void showIMUData();
+    void updateMenu();
 
-    // LED Blinking Parameters
-    const unsigned long BLINK_INTERVAL = 500; // milliseconds
-    bool wasConnected;
-
-    bool presentationMode;
-
-    // Define Melodies
+    // Sound sequences
     static const ToneDuration connectMelody[];
     static const ToneDuration disconnectMelody[];
     static const ToneDuration resetCursorMelody[];
@@ -40,10 +31,22 @@ private:
     static const SoundSequence disconnectSequence;
     static const SoundSequence resetCursorSequence;
 
-    // Handle Connection Events
-    void handleConnectionEvents();
-    // Handle Button Press
-    void handleButtonPress();
+    // Member variables
+    BLEHandler bleHandler;
+    IMUHandler imuHandler;
+    SoundManager soundManager;
+    LEDController ledController;
+    RotaryHandler rotaryHandler;
+    DisplayManager displayManager;
+    Menu menu;
+
+    bool posToggle;
+    bool wasConnected;
+    bool presentationMode;
+    int lastRotaryPosition;
+
+    // Constants
+    static const uint16_t BLINK_INTERVAL = 500;
 };
 
 #endif

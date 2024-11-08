@@ -12,6 +12,7 @@ public:
     void printIMUData(float gx, float gy, float gz);
     void drawCircle(int x, int y, int radius, uint16_t color);
     void drawRandomRect();
+    void printMenuItems(const char** items, size_t count, size_t currentIndex);
 
 private:
     void setTextProperties();

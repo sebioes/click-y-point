@@ -33,14 +33,21 @@ void DisplayManager::printIMUData(float gx, float gy, float gz) {
     StickCP2.Display.printf("Gyro: %0.2f %0.2f %0.2f\r\n", gx, gy, gz);
 }
 
-void DisplayManager::drawCircle(int x, int y, int radius, uint16_t color) {
-    StickCP2.Display.fillCircle(x, y, radius, color);
-}
-
-void DisplayManager::drawRandomRect() {
-    int x = rand() % StickCP2.Display.width();
-    int y = rand() % StickCP2.Display.height();
-    int r = (StickCP2.Display.width() >> 4) + 2;
-    uint16_t c = rand();
-    StickCP2.Display.fillRect(x - r, y - r, r * 2, r * 2, c);
+void DisplayManager::printMenuItems(const char** items, size_t count, size_t currentIndex) {
+    clear();
+    StickCP2.Display.setTextColor(GREEN);
+    
+    const int lineHeight = 20;
+    const int startY = 20;
+    
+    for (size_t i = 0; i < count; i++) {
+        if (i == currentIndex) {
+            StickCP2.Display.setTextColor(WHITE);  // Highlight selected item
+        } else {
+            StickCP2.Display.setTextColor(GREEN);
+        }
+        
+        StickCP2.Display.setCursor(10, startY + i * lineHeight);
+        StickCP2.Display.printf("%s\r\n", items[i]);
+    }
 } 
