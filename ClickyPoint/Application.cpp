@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "SoundManager.h"
+#include "M5StickCPlus2.h"
 
 // Define the melodies
 const ToneDuration Application::connectMelody[] = {
@@ -79,6 +80,9 @@ void Application::setup() {
 
   // Initialize the rotary encoder
   rotaryHandler.initialize();
+
+  // Initialize Display Manager
+  displayManager.begin();
 }
 
 void Application::loop() {
@@ -229,10 +233,13 @@ void Application::loop() {
   if (rotaryHandler.hasRotated()) {
         int32_t pos = rotaryHandler.getPosition();
         Serial.printf("Rotary position: %d\n", pos);
+        // displayManager.printText("Rotary position: ");
+        // displayManager.printText(String(pos).c_str());
     }
     
   if (rotaryHandler.isButtonPressed()) {
     Serial.println("Rotary button pressed");
+    displayManager.printText("Rotary button pressed");
   }
 
 }

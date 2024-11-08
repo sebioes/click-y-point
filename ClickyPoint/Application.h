@@ -6,7 +6,7 @@
 #include "LEDController.h"
 #include "SoundManager.h"
 #include "RotaryHandler.h"
-
+#include "DisplayManager.h"
 struct SoundSequence; // Forward declaration
 
 class Application {
@@ -21,6 +21,8 @@ private:
     LEDController ledController;
     SoundManager soundManager;
     RotaryHandler rotaryHandler;
+    DisplayManager displayManager;
+    
     // Position Toggle
     bool posToggle;
 
