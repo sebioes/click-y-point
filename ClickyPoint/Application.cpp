@@ -70,7 +70,9 @@ void Application::setupMenu() {
 
 void Application::togglePresentationMode() {
     presentationMode = !presentationMode;
-    displayManager.printText(presentationMode ? "Mode: Presentation" : "Mode: Normal");
+    size_t count;
+    const char** labels = menu.getAllLabels(count);
+    displayManager.printMenuItems(labels, count, menu.getCurrentIndex());
 }
 
 void Application::resetCursor() {
