@@ -59,8 +59,9 @@ void Application::resetCursor() {
 
 void Application::showIMUData() {
   if (M5.Imu.update()) {
-    auto data = M5.Imu.getImuData();
-    displayManager.printIMUData(data.gyro.x, data.gyro.y, data.gyro.z);
+    float val[3];
+    M5.Imu.getAccel(&val[0], &val[1], &val[2]);
+    displayManager.printIMUData(val[0], val[1], val[2]);
   }
 }
 
@@ -137,7 +138,8 @@ void Application::handleIMUData() {
   unsigned long currentTime = millis();
 
   if (M5.Imu.update() && bleDevice.isConnected()) {
-    auto data = M5.Imu.getImuData();
+    float val[3];
+    M5.Imu.getAccel(&val[0], &val[1], &val[2]);
 
     if (presentationMode) {
       // --------- Cooldown Management ---------
@@ -152,14 +154,14 @@ void Application::handleIMUData() {
       if (!inCooldown) {
         // --------- Left Arrow Detection ---------
         if (!leftInitialDetected) {
-          if (data.gyro.y <= leftInitialThreshold) {
+          if (val[1] <= leftInitialThreshold) {
             leftInitialDetected = true;
             leftIterationCount = 0;
             Serial.println("Left arrow: Initial threshold detected");
           }
         } else {
           leftIterationCount++;
-          if (data.gyro.y >= leftFinalThreshold) {
+          if (val[1] >= leftFinalThreshold) {
             // Trigger left arrow
             bleDevice.write(0xD8);
             Serial.println("Left arrow triggered");
@@ -179,14 +181,14 @@ void Application::handleIMUData() {
 
         // --------- Right Arrow Detection ---------
         if (!rightInitialDetected) {
-          if (data.gyro.y >= rightInitialThreshold) {
+          if (val[1] >= rightInitialThreshold) {
             rightInitialDetected = true;
             rightIterationCount = 0;
             Serial.println("Right arrow: Initial threshold detected");
           }
         } else {
           rightIterationCount++;
-          if (data.gyro.y <= rightFinalThreshold) {
+          if (val[1] <= rightFinalThreshold) {
             // Trigger right arrow
             bleDevice.write(0xD7);
             Serial.println("Right arrow triggered");
@@ -212,9 +214,9 @@ void Application::handleIMUData() {
         deltaMs = 10; // Assume 10ms
 
       int8_t movement_x =
-          static_cast<int8_t>(-data.gyro.z * deltaMs * sensitivity / 1000.0f);
+          static_cast<int8_t>(-val[2] * deltaMs * sensitivity / 1000.0f);
       int8_t movement_y =
-          static_cast<int8_t>(-data.gyro.x * deltaMs * sensitivity / 1000.0f);
+          static_cast<int8_t>(-val[0] * deltaMs * sensitivity / 1000.0f);
 
       bleDevice.move(movement_x, movement_y);
     }
