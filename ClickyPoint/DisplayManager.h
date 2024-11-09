@@ -14,6 +14,7 @@ public:
     void drawCircle(int x, int y, int radius, uint16_t color);
     void drawRandomRect();
     void printMenuItems(const std::vector<std::string>& labels, size_t currentIndex);
+    void showDefaultScreen(const char* timeStr, const char* batteryStr, const char* modeStr);
 
 private:
     void setTextProperties();

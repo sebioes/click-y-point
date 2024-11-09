@@ -21,6 +21,7 @@ private:
     void resetCursor();
     void showIMUData();
     void updateMenu();
+    void updateDefaultScreen();
 
     // Refactored methods for clarity
     void handleIMUData();
@@ -41,6 +42,8 @@ private:
     bool presentationMode;
     float sensitivity;
     int32_t lastRotaryPosition;
+    bool menuOpen;
+    unsigned long menuLastInteractionTime;
 
     // Newly added member variables
     bool posToggle;
@@ -66,12 +69,13 @@ private:
     static constexpr float leftFinalThreshold = 300.0f;
     static constexpr float rightInitialThreshold = 700.0f;
     static constexpr float rightFinalThreshold = 400.0f;
+    static constexpr uint16_t menuTimeout = 5000;
 
     // Pins
-    static const uint16_t buttonPin = 26;
-    static const uint16_t rotaryClkPin = 33;
-    static const uint16_t rotaryDtPin = 32;
-    static const uint16_t rotarySwPin = 0;
+    static constexpr uint16_t buttonPin = 26;
+    static constexpr uint16_t rotaryClkPin = 33;
+    static constexpr uint16_t rotaryDtPin = 32;
+    static constexpr uint16_t rotarySwPin = 0;
 };
 
 #endif

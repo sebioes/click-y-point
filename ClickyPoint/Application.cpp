@@ -23,7 +23,8 @@ Application::Application()
       wasConnected(true), leftClickLastDebounceTime(0), leftClickPressed(false),
       cooldownStartTime(0), inCooldown(false), leftInitialDetected(false),
       leftIterationCount(0), rightInitialDetected(false),
-      rightIterationCount(0), previousTime(millis()) {}
+      rightIterationCount(0), previousTime(millis()), menuOpen(false),
+      menuLastInteractionTime(0) {}
 
 void Application::setupMenu() {
   // Add menu item with dynamic label for presentation mode
@@ -59,7 +60,7 @@ void Application::resetCursor() {
 void Application::showIMUData() {
   if (M5.Imu.update()) {
     float val[3];
-    M5.Imu.getAccel(&val[0], &val[1], &val[2]);
+    M5.Imu.getGyro(&val[0], &val[1], &val[2]);
     displayManager.printIMUData(val[0], val[1], val[2]);
   }
 }
@@ -76,11 +77,43 @@ void Application::updateMenu() {
     // Update display with all menu items
     auto labels = menu.getAllLabels();
     displayManager.printMenuItems(labels, menu.getCurrentIndex());
+
+    // Reset the menu timeout
+    menuLastInteractionTime = millis();
   }
 
   if (rotaryHandler.isButtonPressed()) {
     menu.select();
+    // Reset the menu timeout
+    menuLastInteractionTime = millis();
   }
+}
+
+void Application::updateDefaultScreen() {
+  // Get the time
+  m5::rtc_datetime_t dt;
+  char timeString[16] = "Time N/A";
+  if (M5.Rtc.isEnabled() && M5.Rtc.getDateTime(&dt)) {
+    snprintf(timeString, sizeof(timeString), "%02d:%02d:%02d", dt.time.hours,
+             dt.time.minutes, dt.time.seconds);
+  }
+
+  // Get battery level
+  int batteryLevel = M5.Power.getBatteryLevel();
+  char batteryString[16];
+  if (batteryLevel >= 0) {
+    snprintf(batteryString, sizeof(batteryString), "Battery: %d%%",
+             batteryLevel);
+  } else {
+    snprintf(batteryString, sizeof(batteryString), "Battery N/A");
+  }
+
+  // Get mode
+  const char *modeString =
+      presentationMode ? "Mode: Presentation" : "Mode: Normal";
+
+  // Update display
+  displayManager.showDefaultScreen(timeString, batteryString, modeString);
 }
 
 void Application::setup() {
@@ -121,14 +154,40 @@ void Application::setup() {
 
 void Application::loop() {
   M5.update();
-  handleIMUData();
   handleConnectionEvents();
   ledController.update();
-  handleButtonPress();
   soundManager.update();
   rotaryHandler.update();
-  updateMenu();
 
+  if (menuOpen) {
+    updateMenu();
+
+    // Close menu after timeout
+    if (millis() - menuLastInteractionTime > menuTimeout) {
+      menuOpen = false;
+      // Show default screen when menu closes
+      updateDefaultScreen();
+    }
+  } else {
+    handleIMUData();
+    handleButtonPress();
+    // Update default screen periodically
+    static unsigned long lastUpdateTime = 0;
+    if (millis() - lastUpdateTime > 1000) { // Update every second
+      lastUpdateTime = millis();
+      updateDefaultScreen();
+    }
+
+    // Check if rotary button is pressed to open menu
+    if (rotaryHandler.isButtonPressed()) {
+      menuOpen = true;
+      menuLastInteractionTime = millis();
+
+      // Display the menu
+      auto labels = menu.getAllLabels();
+      displayManager.printMenuItems(labels, menu.getCurrentIndex());
+    }
+  }
 }
 
 // Refactored method to handle IMU data
@@ -138,7 +197,7 @@ void Application::handleIMUData() {
 
   if (M5.Imu.update() && bleDevice.isConnected()) {
     float val[3];
-    M5.Imu.getAccel(&val[0], &val[1], &val[2]);
+    M5.Imu.getGyro(&val[0], &val[1], &val[2]);
 
     if (presentationMode) {
       // --------- Cooldown Management ---------
@@ -263,4 +322,3 @@ void Application::handleButtonPress() {
     }
   }
 }
-

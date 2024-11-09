@@ -49,3 +49,19 @@ void DisplayManager::printMenuItems(const std::vector<std::string>& labels, size
         M5.Display.printf("%s\r\n", labels[i].c_str());
     }
 } 
+
+void DisplayManager::showDefaultScreen(const char* timeStr, const char* batteryStr, const char* modeStr) {
+    clear();
+    M5.Display.setTextColor(TFT_WHITE);
+
+    // Center the text on the display
+    int centerX = M5.Display.width() / 2;
+    int startY = 20;
+    int lineHeight = 30;
+
+    M5.Display.setTextDatum(textdatum_t::top_center);
+
+    M5.Display.drawString(timeStr, centerX, startY);
+    M5.Display.drawString(batteryStr, centerX, startY + lineHeight);
+    M5.Display.drawString(modeStr, centerX, startY + 2 * lineHeight);
+}
