@@ -1,5 +1,4 @@
 #include "Application.h"
-#include "M5StickCPlus2.h"
 
 // Define the melodies
 const ToneDuration connectMelody[] = {

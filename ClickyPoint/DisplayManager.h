@@ -1,7 +1,6 @@
 #ifndef DISPLAY_MANAGER_H
 #define DISPLAY_MANAGER_H
 
-#include <M5Unified.h>
 #include <vector>
 #include <string>
 
