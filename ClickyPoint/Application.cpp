@@ -1,115 +1,86 @@
 #include "Application.h"
-#include "SoundManager.h"
 #include "M5StickCPlus2.h"
 
 // Define the melodies
-const ToneDuration Application::connectMelody[] = {
+const ToneDuration connectMelody[] = {
     {600, 120}, {0, 30}, {400, 120}, {0, 30}, {800, 120}};
 
-const ToneDuration Application::disconnectMelody[] = {
-    {400, 150}, {0, 30}, {300, 150}};
+const ToneDuration disconnectMelody[] = {{400, 150}, {0, 30}, {300, 150}};
 
-const ToneDuration Application::resetCursorMelody[] = {{100, 50}};
-
-unsigned long leftClickLastDebounceTime = 0;
-const uint16_t leftClickDebounceDelay = 100;
-bool leftClickPressed = false;
-
-// Cooldown settings
-const uint16_t cooldownDuration = 500; // milliseconds
-unsigned long cooldownStartTime = 0;
-bool inCooldown = false;
-
-// Gesture detection settings
-const uint16_t maxIterations = 80;
-
-// Left arrow thresholds
-const float leftInitialThreshold = -400.0;
-const float leftFinalThreshold = 300.0;
-
-// Right arrow thresholds
-const float rightInitialThreshold = 700.0;
-const float rightFinalThreshold = 400.0;
-
-// Variables to track gesture progress
-bool leftInitialDetected = false;
-uint16_t leftIterationCount = 0;
-
-bool rightInitialDetected = false;
-uint16_t rightIterationCount = 0;
+const ToneDuration resetCursorMelody[] = {{100, 50}};
 
 // Define the sound sequences
-const SoundSequence Application::connectSequence = {
-    Application::connectMelody, sizeof(connectMelody) / sizeof(ToneDuration)};
-const SoundSequence Application::disconnectSequence = {
-    Application::disconnectMelody,
-    sizeof(disconnectMelody) / sizeof(ToneDuration)};
-const SoundSequence Application::resetCursorSequence = {
-    Application::resetCursorMelody,
-    sizeof(resetCursorMelody) / sizeof(ToneDuration)};
+const SoundSequence connectSequence = {connectMelody, sizeof(connectMelody) /
+                                                          sizeof(ToneDuration)};
+const SoundSequence disconnectSequence = {
+    disconnectMelody, sizeof(disconnectMelody) / sizeof(ToneDuration)};
+const SoundSequence resetCursorSequence = {
+    resetCursorMelody, sizeof(resetCursorMelody) / sizeof(ToneDuration)};
 
 Application::Application()
-    : bleHandler("Click y Point", "Click y Point", 1920, 1080), posToggle(true),
-      wasConnected(true), presentationMode(false), rotaryHandler(33, 32, 0) {}
+    : bleDevice("Click y Point", "Click y Point"), presentationMode(false),
+      sensitivity(35.0f), lastRotaryPosition(0),
+      rotaryHandler(rotaryClkPin, rotaryDtPin, rotarySwPin), posToggle(true),
+      wasConnected(true), leftClickLastDebounceTime(0), leftClickPressed(false),
+      cooldownStartTime(0), inCooldown(false), leftInitialDetected(false),
+      leftIterationCount(0), rightInitialDetected(false),
+      rightIterationCount(0), previousTime(millis()) {}
 
 void Application::setupMenu() {
-    // Add menu item with dynamic label for presentation mode
-    menu.addItem(
-        [this]() -> const char* {
-            return presentationMode ? "Mode: Presentation" : "Mode: Normal";
-        },
-        [this]() { 
-            togglePresentationMode(); 
-        }
-    );
-    
-    // Add static menu items
-    menu.addItem("Reset Cursor", [this]() { resetCursor(); });
-    menu.addItem("Show IMU Data", [this]() { showIMUData(); });
+  // Add menu item with dynamic label for presentation mode
+  menu.addItem(
+      [this]() -> const char * {
+        return presentationMode ? "Mode: Presentation" : "Mode: Normal";
+      },
+      [this]() { togglePresentationMode(); });
+
+  // Add static menu items
+  menu.addItem("Reset Cursor", [this]() { resetCursor(); });
+  menu.addItem("Show IMU Data", [this]() { showIMUData(); });
 }
 
 void Application::togglePresentationMode() {
-    presentationMode = !presentationMode;
-    auto labels = menu.getAllLabels();
-    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  presentationMode = !presentationMode;
+  auto labels = menu.getAllLabels();
+  displayManager.printMenuItems(labels, menu.getCurrentIndex());
 }
 
 void Application::resetCursor() {
-    if (bleHandler.isConnected()) {
-        soundManager.playSoundSequence(&resetCursorSequence);
+  if (bleDevice.isConnected()) {
+    soundManager.playSoundSequence(&resetCursorSequence);
     if (posToggle) {
-      bleHandler.setPosition(960, 540);
+      bleDevice.setPosition(960, 540, maxX, maxY);
     } else {
-      bleHandler.setPosition(961, 541);
+      bleDevice.setPosition(961, 541, maxX, maxY);
     }
     posToggle = !posToggle;
-    }
+  }
 }
 
 void Application::showIMUData() {
-    if (imuHandler.update()) {
-        IMUData data = imuHandler.getData();
-        displayManager.printIMUData(data.gyro_x, data.gyro_y, data.gyro_z);
-    }
+  if (M5.Imu.update()) {
+    auto data = M5.Imu.getImuData();
+    displayManager.printIMUData(data.gyro.x, data.gyro.y, data.gyro.z);
+  }
 }
 
 void Application::updateMenu() {
-    if (rotaryHandler.hasRotated()) {
-        if (rotaryHandler.getPosition() > lastRotaryPosition) {
-            menu.next();
-        } else {
-            menu.previous();
-        }
-        lastRotaryPosition = rotaryHandler.getPosition();
-        
-        // Update display with all menu items
-        auto labels = menu.getAllLabels();
-        displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  if (rotaryHandler.hasRotated()) {
+    if (rotaryHandler.getPosition() > lastRotaryPosition) {
+      menu.next();
+    } else {
+      menu.previous();
     }
-    
-    if (rotaryHandler.isButtonPressed()) {
-        menu.select();
-    }
+    lastRotaryPosition = rotaryHandler.getPosition();
+
+    // Update display with all menu items
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  }
+
+  if (rotaryHandler.isButtonPressed()) {
+    menu.select();
+  }
 }
 
 void Application::setup() {
@@ -118,53 +89,60 @@ void Application::setup() {
   cfg.led_brightness = 255;
   M5.begin(cfg);
 
-  pinMode(26, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT_PULLUP);
 
   // Initialize Serial
   Serial.begin(115200);
 
   // Initialize IMU
-  if (!imuHandler.initialize()) {
+  auto imu_type = M5.Imu.getType();
+  if (imu_type == m5::imu_none) {
     Serial.println("IMU not found, stopping.");
     while (true) {
       delay(1);
     }
   }
+  M5.Imu.init();
   Serial.printf("IMU initialized.\n");
 
-  // Initialize Sound Manager
   soundManager.begin();
 
-  // Initialize BLE
-  bleHandler.begin();
+  bleDevice.begin(true, true);
 
-  // Initialize the rotary encoder
   rotaryHandler.initialize();
 
-  // Initialize Display Manager
   displayManager.begin();
 
-  // Initialize the menu
   setupMenu();
 
-  // Show initial menu items
   auto labels = menu.getAllLabels();
   displayManager.printMenuItems(labels, menu.getCurrentIndex());
 }
 
 void Application::loop() {
   M5.update();
+  handleIMUData();
+  handleConnectionEvents();
+  ledController.update();
+  handleButtonPress();
+  soundManager.update();
+  rotaryHandler.update();
+  updateMenu();
+
+}
+
+// Refactored method to handle IMU data
+void Application::handleIMUData() {
+  static unsigned long previousTime = millis();
   unsigned long currentTime = millis();
-  // Handle IMU data
-  if (imuHandler.update() && bleHandler.isConnected()) {
-    IMUData data = imuHandler.getData();
+
+  if (M5.Imu.update() && bleDevice.isConnected()) {
+    auto data = M5.Imu.getImuData();
 
     if (presentationMode) {
-      float gyro_y = data.gyro_y;
-
       // --------- Cooldown Management ---------
       if (inCooldown) {
-        if (currentTime - cooldownStartTime > cooldownDuration) {
+        if (currentTime - cooldownStartTime > arrowCooldownDuration) {
           inCooldown = false;
           Serial.println("Cooldown ended");
         }
@@ -174,16 +152,16 @@ void Application::loop() {
       if (!inCooldown) {
         // --------- Left Arrow Detection ---------
         if (!leftInitialDetected) {
-          if (gyro_y <= leftInitialThreshold) {
+          if (data.gyro.y <= leftInitialThreshold) {
             leftInitialDetected = true;
             leftIterationCount = 0;
             Serial.println("Left arrow: Initial threshold detected");
           }
         } else {
           leftIterationCount++;
-          if (gyro_y >= leftFinalThreshold) {
+          if (data.gyro.y >= leftFinalThreshold) {
             // Trigger left arrow
-            bleHandler.write(0xD8);
+            bleDevice.write(0xD8);
             Serial.println("Left arrow triggered");
             inCooldown = true;
             cooldownStartTime = currentTime;
@@ -191,7 +169,7 @@ void Application::loop() {
             // Reset detection
             leftInitialDetected = false;
             leftIterationCount = 0;
-          } else if (leftIterationCount >= maxIterations) {
+          } else if (leftIterationCount >= arrowDetectionMaxIterations) {
             // Timeout
             leftInitialDetected = false;
             leftIterationCount = 0;
@@ -201,16 +179,16 @@ void Application::loop() {
 
         // --------- Right Arrow Detection ---------
         if (!rightInitialDetected) {
-          if (gyro_y >= rightInitialThreshold) {
+          if (data.gyro.y >= rightInitialThreshold) {
             rightInitialDetected = true;
             rightIterationCount = 0;
             Serial.println("Right arrow: Initial threshold detected");
           }
         } else {
           rightIterationCount++;
-          if (gyro_y <= rightFinalThreshold) {
+          if (data.gyro.y <= rightFinalThreshold) {
             // Trigger right arrow
-            bleHandler.write(0xD7);
+            bleDevice.write(0xD7);
             Serial.println("Right arrow triggered");
             inCooldown = true;
             cooldownStartTime = currentTime;
@@ -218,7 +196,7 @@ void Application::loop() {
             // Reset detection
             rightInitialDetected = false;
             rightIterationCount = 0;
-          } else if (rightIterationCount >= maxIterations) {
+          } else if (rightIterationCount >= arrowDetectionMaxIterations) {
             // Timeout
             rightInitialDetected = false;
             rightIterationCount = 0;
@@ -227,27 +205,25 @@ void Application::loop() {
         }
       }
     } else {
-      static unsigned long previousTime = currentTime;
       unsigned long deltaMs = currentTime - previousTime;
       previousTime = currentTime;
 
-      // Prevent division by zero
       if (deltaMs == 0)
         deltaMs = 10; // Assume 10ms
 
-      // Compute movement using integer math
       int8_t movement_x =
-          static_cast<int8_t>(-data.gyro_z * deltaMs * 35.0f / 1000.0f);
+          static_cast<int8_t>(-data.gyro.z * deltaMs * sensitivity / 1000.0f);
       int8_t movement_y =
-          static_cast<int8_t>(-data.gyro_x * deltaMs * 35.0f / 1000.0f);
+          static_cast<int8_t>(-data.gyro.x * deltaMs * sensitivity / 1000.0f);
 
-      // Send movement if connected and movement exists
-      bleHandler.move(movement_x, movement_y);
+      bleDevice.move(movement_x, movement_y);
     }
   }
+}
 
-  // Handle connection events
-  if (bleHandler.isConnected()) {
+// Refactored method to handle connection events
+void Application::handleConnectionEvents() {
+  if (bleDevice.isConnected()) {
     if (!wasConnected) {
       ledController.setBrightness(80);
       soundManager.playSoundSequence(&connectSequence);
@@ -255,37 +231,35 @@ void Application::loop() {
     }
   } else {
     if (wasConnected) {
-      ledController.blink(BLINK_INTERVAL);
+      ledController.blink(ledBlinkInterval);
       soundManager.playSoundSequence(&disconnectSequence);
       wasConnected = false;
     }
   }
+}
 
-  // Update LED controller
-  ledController.update();
+// Refactored method to handle button press
+void Application::handleButtonPress() {
+  unsigned long currentTime = millis();
 
-  // Handle button press
-   if (M5.BtnPWR.wasPressed()) {
+  if (M5.BtnB.wasPressed()) {
     resetCursor();
   }
-  if (digitalRead(26) == LOW) { // Button is pressed
-    if (!leftClickPressed && (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
-      bleHandler.press(1); // Hold left click
+
+  if (digitalRead(buttonPin) == LOW) {
+    if (!leftClickPressed &&
+        (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
+      bleDevice.press(1);
       leftClickPressed = true;
       leftClickLastDebounceTime = currentTime;
     }
-  } else { // Button is released
-    if (leftClickPressed && (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
-      bleHandler.release(1); // Release left click
+  } else {
+    if (leftClickPressed &&
+        (currentTime - leftClickLastDebounceTime) > leftClickDebounceDelay) {
+      bleDevice.release(1);
       leftClickPressed = false;
       leftClickLastDebounceTime = currentTime;
     }
   }
-
-  // Update sound manager
-  soundManager.update();
-
-  // Update rotary encoder and menu
-  rotaryHandler.update();
-  updateMenu();
 }
+
