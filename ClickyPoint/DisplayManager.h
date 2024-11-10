@@ -16,6 +16,7 @@ public:
     void printText(const char* text, int x, int y, const GFXfont* font = &fonts::FreeSansBold9pt7b, uint16_t color = WHITE);
     void printIMUData(float gx, float gy, float gz);
     void printMenuItems(const std::vector<std::string>& labels, size_t currentIndex);
+    void showSensitivityScreen(float sensitivity);
     void showDefaultScreen(const char* timeStr, const char* modeStr, const char* batteryStr, bool batteryCharging, bool btStatus);
     void resetPreviousValues();
 

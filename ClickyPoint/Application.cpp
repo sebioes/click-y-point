@@ -26,26 +26,96 @@ Application::Application()
       leftIterationCount(0), rightInitialDetected(false),
       rightIterationCount(0), previousTime(millis()), menuOpen(false),
       menuLastInteractionTime(0), batteryLevelIndex(0), batteryLevelCount(0),
-      previousAverageBatteryLevel(0), isCharging(false) {}
+      previousAverageBatteryLevel(0), isCharging(false),
+      inSensitivityAdjustment(false), inIMUDisplay(false) {}
 
 void Application::setupMenu() {
-  // Add menu item with dynamic label for presentation mode
+  // Switch mode between normal and presentation
   menu.addItem(
-      [this]() -> const char * {
+      [this]() -> std::string {
         return presentationMode ? "Mode: Presentation" : "Mode: Normal";
       },
       [this]() { togglePresentationMode(); });
 
-  // Add static menu items
-  menu.addItem("Reset Cursor", [this]() { resetCursor(); });
-  menu.addItem("Show IMU Data", [this]() { showIMUData(); });
+  // Change sensitivity
+  menu.addItem("Change Sensitivity", [this]() { adjustSensitivity(); });
+
+  // Show IMU Data
+  menu.addItem("Show IMU Data", [this]() { startIMUDisplay(); });
+
+  // Power Off
+  menu.addItem("Power Off", [this]() { powerOffDevice(); });
 }
 
 void Application::togglePresentationMode() {
   presentationMode = !presentationMode;
-  auto labels = menu.getAllLabels();
-  displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  // Update display if in menu
+  if (menuOpen) {
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  }
 }
+
+void Application::adjustSensitivity() {
+  inSensitivityAdjustment = true;
+  menuOpen = false;
+  lastRotaryPosition = rotaryHandler.getPosition();
+  // Display the sensitivity adjustment screen
+  displayManager.showSensitivityScreen(sensitivity);
+}
+
+void Application::updateSensitivityAdjustment() {
+  if (rotaryHandler.hasRotated()) {
+    // Change sensitivity within range 10 to 50
+    int32_t delta = lastRotaryPosition - rotaryHandler.getPosition();
+    lastRotaryPosition = rotaryHandler.getPosition();
+    sensitivity += delta;
+    if (sensitivity < 10.0f)
+      sensitivity = 10.0f;
+    if (sensitivity > 50.0f)
+      sensitivity = 50.0f;
+
+    // Update the sensitivity adjustment screen
+    displayManager.showSensitivityScreen(sensitivity);
+  }
+
+  if (rotaryHandler.isButtonPressed()) {
+    // Save sensitivity and return to menu
+    inSensitivityAdjustment = false;
+    menuOpen = true;
+    menuLastInteractionTime = millis();
+    // Display the menu
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  }
+}
+
+void Application::startIMUDisplay() {
+  inIMUDisplay = true;
+  menuOpen = false;
+  // Display the initial IMU data
+  displayManager.printIMUData(0.0f, 0.0f, 0.0f);
+}
+
+void Application::updateIMUDisplay() {
+  if (M5.Imu.update()) {
+    float val[3];
+    M5.Imu.getGyro(&val[0], &val[1], &val[2]);
+    displayManager.printIMUData(val[0], val[1], val[2]);
+  }
+
+  if (rotaryHandler.isButtonPressed()) {
+    // Return to menu
+    inIMUDisplay = false;
+    menuOpen = true;
+    menuLastInteractionTime = millis();
+    // Display the menu
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  }
+}
+
+void Application::powerOffDevice() { M5.Power.powerOff(); }
 
 void Application::resetCursor() {
   if (bleDevice.isConnected()) {
@@ -59,17 +129,9 @@ void Application::resetCursor() {
   }
 }
 
-void Application::showIMUData() {
-  if (M5.Imu.update()) {
-    float val[3];
-    M5.Imu.getGyro(&val[0], &val[1], &val[2]);
-    displayManager.printIMUData(val[0], val[1], val[2]);
-  }
-}
-
 void Application::updateMenu() {
   if (rotaryHandler.hasRotated()) {
-    if (rotaryHandler.getPosition() > lastRotaryPosition) {
+    if (rotaryHandler.getPosition() < lastRotaryPosition) {
       menu.next();
     } else {
       menu.previous();
@@ -163,6 +225,7 @@ void Application::setup() {
     }
   }
   M5.Imu.begin();
+  M5.Imu.setCalibration(0, 10, 0);
   M5.Power.begin();
 
   // Because power data is so jumpy, we take an moving average. We need to
@@ -203,12 +266,16 @@ void Application::loop() {
       displayManager.resetPreviousValues();
       updateDefaultScreen();
     }
+  } else if (inSensitivityAdjustment) {
+    updateSensitivityAdjustment();
+  } else if (inIMUDisplay) {
+    updateIMUDisplay();
   } else {
     handleIMUData();
     handleButtonPress();
     // Update default screen periodically
     static unsigned long lastUpdateTime = 0;
-    if (millis() - lastUpdateTime > 1000) { // Update every second
+    if (millis() - lastUpdateTime > 950) { // Update roughly every second
       lastUpdateTime = millis();
       updateDefaultScreen();
     }

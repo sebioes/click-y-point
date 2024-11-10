@@ -23,12 +23,6 @@ void DisplayManager::printText(const char *text, int x, int y,
   M5.Display.endWrite();
 }
 
-void DisplayManager::printIMUData(float gx, float gy, float gz) {
-  M5.Display.clear(TFT_BLACK);
-  M5.Display.printf("IMU:\r\n");
-  M5.Display.printf("Gyro: %0.2f %0.2f %0.2f\r\n", gx, gy, gz);
-}
-
 void DisplayManager::printMenuItems(const std::vector<std::string> &labels,
                                     size_t currentIndex) {
   M5.Display.startWrite();
@@ -45,6 +39,47 @@ void DisplayManager::printMenuItems(const std::vector<std::string> &labels,
     M5.Display.print(labels[i].c_str());
   }
 
+  M5.Display.endWrite();
+}
+
+void DisplayManager::showSensitivityScreen(float sensitivity) {
+  M5.Display.startWrite();
+  M5.Display.fillScreen(TFT_BLACK);
+
+  // Display the sensitivity value
+  char sensitivityStr[16];
+  snprintf(sensitivityStr, sizeof(sensitivityStr), "Sensitivity: %.1f", sensitivity);
+  M5.Display.setTextColor(WHITE);
+  M5.Display.setTextDatum(textdatum_t::middle_center);
+  M5.Display.setFont(&fonts::FreeSans12pt7b);
+  M5.Display.drawString(sensitivityStr, screenWidth / 2, screenHeight / 4);
+
+  // Display the sensitivity bar
+  int barX = 20;
+  int barY = screenHeight / 2;
+  int barWidth = screenWidth - 40;
+  int barHeight = 20;
+  M5.Display.drawRect(barX, barY, barWidth, barHeight, WHITE);
+
+  // Fill the bar based on sensitivity value
+  float normalizedValue = (sensitivity - 10.0f) / 40.0f; // Range is 10 to 50
+  int filledWidth = static_cast<int>(barWidth * normalizedValue);
+  M5.Display.fillRect(barX + 1, barY + 1, filledWidth - 2, barHeight - 2, GREEN);
+
+  M5.Display.endWrite();
+}
+
+void DisplayManager::printIMUData(float gx, float gy, float gz) {
+  M5.Display.startWrite();
+  M5.Display.fillScreen(TFT_BLACK);
+  M5.Display.setTextColor(WHITE);
+  M5.Display.setTextDatum(textdatum_t::top_left);
+  M5.Display.setFont(&fonts::FreeSans12pt7b);
+  M5.Display.setCursor(10, 20);
+  M5.Display.printf("IMU Data:\n");
+  M5.Display.printf("Gyro X: %0.2f\n", gx);
+  M5.Display.printf("Gyro Y: %0.2f\n", gy);
+  M5.Display.printf("Gyro Z: %0.2f\n", gz);
   M5.Display.endWrite();
 }
 

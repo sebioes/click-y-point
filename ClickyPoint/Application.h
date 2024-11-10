@@ -23,12 +23,17 @@ private:
     void updateMenu();
     void updateDefaultScreen();
 
-    // Refactored methods for clarity
     void handleIMUData();
     void handleConnectionEvents();
     void handleButtonPress();
     void updateSoundManager();
     void updateRotaryEncoderAndMenu();
+
+    void adjustSensitivity();
+    void updateSensitivityAdjustment();
+    void startIMUDisplay();
+    void updateIMUDisplay();
+    void powerOffDevice();
 
     // Member variables
     BleDevice bleDevice;
@@ -80,7 +85,8 @@ private:
     uint16_t batteryLevelCount;
     uint8_t previousAverageBatteryLevel;
     bool isCharging;
-
+    bool inSensitivityAdjustment;
+    bool inIMUDisplay;
 };
 
 #endif
