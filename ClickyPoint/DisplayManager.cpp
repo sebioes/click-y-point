@@ -27,6 +27,8 @@ void DisplayManager::printMenuItems(const std::vector<std::string> &labels,
                                     size_t currentIndex) {
   M5.Display.startWrite();
   M5.Display.fillScreen(TFT_BLACK);
+  M5.Display.setTextDatum(textdatum_t::middle_left);
+  M5.Display.setFont(&fonts::FreeSans12pt7b);
 
   const int lineHeight = 20;
   const int startY = 20;
@@ -48,7 +50,8 @@ void DisplayManager::showSensitivityScreen(float sensitivity) {
 
   // Display the sensitivity value
   char sensitivityStr[16];
-  snprintf(sensitivityStr, sizeof(sensitivityStr), "Sensitivity: %.1f", sensitivity);
+  snprintf(sensitivityStr, sizeof(sensitivityStr), "Sensitivity: %.1f",
+           sensitivity);
   M5.Display.setTextColor(WHITE);
   M5.Display.setTextDatum(textdatum_t::middle_center);
   M5.Display.setFont(&fonts::FreeSans12pt7b);
@@ -64,7 +67,8 @@ void DisplayManager::showSensitivityScreen(float sensitivity) {
   // Fill the bar based on sensitivity value
   float normalizedValue = (sensitivity - 10.0f) / 40.0f; // Range is 10 to 50
   int filledWidth = static_cast<int>(barWidth * normalizedValue);
-  M5.Display.fillRect(barX + 1, barY + 1, filledWidth - 2, barHeight - 2, GREEN);
+  M5.Display.fillRect(barX + 1, barY + 1, filledWidth - 2, barHeight - 2,
+                      GREEN);
 
   M5.Display.endWrite();
 }
