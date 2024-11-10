@@ -3,9 +3,11 @@
 
 DisplayManager::DisplayManager()
     : screenWidth(240), screenHeight(135), padding(10), prevTimeStr(""),
-      prevModeStr(""), prevBatteryStr(""), prevBtStatus(false) {}
+      prevModeStr(""), prevBatteryStr(""), prevBatteryCharging(false),
+      prevBtStatus(false) {}
 
 void DisplayManager::begin() {
+  M5.Display.begin();
   M5.Display.setEpdMode(epd_mode_t::epd_fastest);
   M5.Display.setRotation(1);
 }
@@ -47,7 +49,8 @@ void DisplayManager::printMenuItems(const std::vector<std::string> &labels,
 }
 
 void DisplayManager::showDefaultScreen(const char *timeStr, const char *modeStr,
-                                       const char *batteryStr, bool btStatus) {
+                                       const char *batteryStr,
+                                       bool batteryCharging, bool btStatus) {
   M5.Display.startWrite();
   M5.Display.waitDisplay();
 
@@ -80,25 +83,37 @@ void DisplayManager::showDefaultScreen(const char *timeStr, const char *modeStr,
   }
 
   // Battery
-  if (prevBatteryStr != batteryStr) {
+  if (prevBatteryStr != batteryStr || prevBatteryCharging != batteryCharging) {
     M5.Display.setClipRect(batteryX, batteryY, batteryW, batteryH);
     M5.Display.fillRect(batteryX, batteryY, batteryW, batteryH,
                         TFT_BLACK); // Clear the area
     uint8_t batteryStrLength = strlen(batteryStr);
     M5.Display.setTextDatum(textdatum_t::top_right);
     M5.Display.setFont(&fonts::FreeSans9pt7b);
-    M5.Display.setCursor(screenWidth - padding - batteryStrLength * 12, batteryY + 7);
+    M5.Display.setCursor(screenWidth - padding - batteryStrLength * 12,
+                         batteryY + 7);
     M5.Display.print(batteryStr);
 
     // Battery Icon
-    int batteryIconX = screenWidth - battery_png_width - 2 * padding -
-                       batteryStrLength * 12;
-    int batteryIconY = batteryY;
-    M5.Display.drawPng(battery_png, ~0u, batteryIconX, batteryIconY,
-                       battery_png_width, battery_png_height, 0, 0, 1.0f, 1.0f,
-                       datum_t::top_right);
+    if (batteryCharging) {
+      int batteryIconX = screenWidth - battery_charging_png_width -
+                         2 * padding - batteryStrLength * 12;
+      int batteryIconY = batteryY;
+      M5.Display.drawPng(battery_charging_png, ~0u, batteryIconX, batteryIconY,
+                         battery_charging_png_width,
+                         battery_charging_png_height, 0, 0, 1.0f, 1.0f,
+                         datum_t::top_right);
+    } else {
+      int batteryIconX =
+          screenWidth - battery_png_width - 2 * padding - batteryStrLength * 12;
+      int batteryIconY = batteryY;
+      M5.Display.drawPng(battery_png, ~0u, batteryIconX, batteryIconY,
+                         battery_png_width, battery_png_height, 0, 0, 1.0f,
+                         1.0f, datum_t::top_right);
+    }
     M5.Display.clearClipRect();
     prevBatteryStr = batteryStr;
+    prevBatteryCharging = batteryCharging;
   }
 
   // Bluetooth

@@ -38,26 +38,6 @@ private:
     DisplayManager displayManager;
     Menu menu;
 
-    // State variables
-    bool presentationMode;
-    float sensitivity;
-    int32_t lastRotaryPosition;
-    bool menuOpen;
-    unsigned long menuLastInteractionTime;
-
-    // Newly added member variables
-    bool posToggle;
-    bool wasConnected;
-    unsigned long leftClickLastDebounceTime;
-    bool leftClickPressed;
-    unsigned long cooldownStartTime;
-    bool inCooldown;
-    bool leftInitialDetected;
-    uint16_t leftIterationCount;
-    bool rightInitialDetected;
-    uint16_t rightIterationCount;
-    unsigned long previousTime;
-
     // Constants
     static constexpr uint16_t maxX = 1920; // Screen width
     static constexpr uint16_t maxY = 1080; // Screen height
@@ -70,12 +50,37 @@ private:
     static constexpr float rightInitialThreshold = 700.0f;
     static constexpr float rightFinalThreshold = 400.0f;
     static constexpr uint16_t menuTimeout = 5000;
+    static constexpr uint16_t batteryLevelNumSamples = 100;
 
     // Pins
     static constexpr uint16_t buttonPin = 26;
     static constexpr uint16_t rotaryClkPin = 33;
     static constexpr uint16_t rotaryDtPin = 32;
     static constexpr uint16_t rotarySwPin = 0;
+
+    // State variables
+    bool presentationMode;
+    float sensitivity;
+    int32_t lastRotaryPosition;
+    bool menuOpen;
+    unsigned long menuLastInteractionTime;
+    bool posToggle;
+    bool wasConnected;
+    unsigned long leftClickLastDebounceTime;
+    bool leftClickPressed;
+    unsigned long cooldownStartTime;
+    bool inCooldown;
+    bool leftInitialDetected;
+    uint16_t leftIterationCount;
+    bool rightInitialDetected;
+    uint16_t rightIterationCount;
+    unsigned long previousTime;
+    int32_t batteryLevelSamples[batteryLevelNumSamples];
+    uint16_t batteryLevelIndex;
+    uint16_t batteryLevelCount;
+    uint8_t previousAverageBatteryLevel;
+    bool isCharging;
+
 };
 
 #endif

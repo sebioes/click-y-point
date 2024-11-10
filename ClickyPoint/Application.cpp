@@ -1,4 +1,5 @@
 #include "Application.h"
+#include <cstdio>
 
 // Define the melodies
 const ToneDuration connectMelody[] = {
@@ -24,7 +25,8 @@ Application::Application()
       cooldownStartTime(0), inCooldown(false), leftInitialDetected(false),
       leftIterationCount(0), rightInitialDetected(false),
       rightIterationCount(0), previousTime(millis()), menuOpen(false),
-      menuLastInteractionTime(0) {}
+      menuLastInteractionTime(0), batteryLevelIndex(0), batteryLevelCount(0),
+      previousAverageBatteryLevel(0), isCharging(false) {}
 
 void Application::setupMenu() {
   // Add menu item with dynamic label for presentation mode
@@ -100,20 +102,42 @@ void Application::updateDefaultScreen() {
 
   // Get battery level
   int batteryLevel = M5.Power.getBatteryLevel();
+
+  // Store in samples array
+  batteryLevelSamples[batteryLevelIndex] = batteryLevel;
+  batteryLevelIndex = (batteryLevelIndex + 1) % batteryLevelNumSamples;
+  if (batteryLevelCount < batteryLevelNumSamples) {
+    batteryLevelCount++;
+  }
+
+  // Compute average
+  uint32_t sum = 0;
+  for (int i = 0; i < batteryLevelCount; i++) {
+    sum += batteryLevelSamples[i];
+  }
+  uint8_t averageBatteryLevel = sum / batteryLevelCount;
+
   char batteryString[16];
-  if (batteryLevel >= 0) {
-    snprintf(batteryString, sizeof(batteryString), "%d%%", batteryLevel);
+  if (averageBatteryLevel >= 0) {
+    snprintf(batteryString, sizeof(batteryString), "%d%%", averageBatteryLevel);
   } else {
     snprintf(batteryString, sizeof(batteryString), "N/A");
   }
 
   // Get mode
-  const char *modeString =
-      presentationMode ? "Presentation" : "Normal";
+  const char *modeString = presentationMode ? "Presentation" : "Normal";
+
+  if (isCharging && averageBatteryLevel < previousAverageBatteryLevel) {
+    isCharging = false;
+  } else if (!isCharging && averageBatteryLevel > previousAverageBatteryLevel) {
+    isCharging = true;
+  }
 
   // Update display
   displayManager.showDefaultScreen(timeString, modeString, batteryString,
-                                   bleDevice.isConnected());
+                                   isCharging, bleDevice.isConnected());
+
+  previousAverageBatteryLevel = averageBatteryLevel;
 }
 
 void Application::setup() {
@@ -121,7 +145,6 @@ void Application::setup() {
   auto cfg = M5.config();
   cfg.serial_baudrate = 115200; // Set serial baud rate
   cfg.clear_display = true;     // Clear the screen on begin
-  cfg.output_power = true;      // Use external port 5V output
   cfg.internal_imu = true;      // Use internal IMU
   cfg.internal_rtc = true;      // Use internal RTC
   cfg.internal_spk = true;      // Use internal speaker
@@ -139,8 +162,16 @@ void Application::setup() {
       delay(1);
     }
   }
-  M5.Imu.init();
-  M5_LOGI("IMU initialized.\n");
+  M5.Imu.begin();
+  M5.Power.begin();
+
+  // Because power data is so jumpy, we take an moving average. We need to
+  // initialize that average here
+  for (int i = 0; i < batteryLevelNumSamples; i++) {
+    batteryLevelSamples[i] = M5.Power.getBatteryLevel();
+    M5.delay(1);
+  }
+  batteryLevelCount = batteryLevelNumSamples;
 
   soundManager.begin();
 
@@ -151,6 +182,8 @@ void Application::setup() {
   displayManager.begin();
 
   setupMenu();
+
+  Serial.begin(115200);
 }
 
 void Application::loop() {
