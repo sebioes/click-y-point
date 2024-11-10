@@ -19,7 +19,7 @@ void SoundManager::playSoundSequence(const SoundSequence* sequence) {
         if (currentSequence->melody[0].frequency != 0) {
             M5.Speaker.tone(currentSequence->melody[0].frequency, currentSequence->melody[0].duration);
         } else {
-            delay(currentSequence->melody[0].duration); // Minimal delay to skip silence
+            M5.delay(currentSequence->melody[0].duration);
         }
         currentState = SoundState::PLAYING;
     }

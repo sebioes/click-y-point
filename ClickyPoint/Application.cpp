@@ -102,41 +102,45 @@ void Application::updateDefaultScreen() {
   int batteryLevel = M5.Power.getBatteryLevel();
   char batteryString[16];
   if (batteryLevel >= 0) {
-    snprintf(batteryString, sizeof(batteryString), "%d%%",
-             batteryLevel);
+    snprintf(batteryString, sizeof(batteryString), "%d%%", batteryLevel);
   } else {
     snprintf(batteryString, sizeof(batteryString), "N/A");
   }
 
   // Get mode
   const char *modeString =
-      presentationMode ? "Mode: Presentation" : "Mode: Normal";
+      presentationMode ? "Presentation" : "Normal";
 
   // Update display
-  displayManager.showDefaultScreen(timeString, modeString, batteryString, bleDevice.isConnected());
+  displayManager.showDefaultScreen(timeString, modeString, batteryString,
+                                   bleDevice.isConnected());
 }
 
 void Application::setup() {
   // Initialize M5
   auto cfg = M5.config();
-  cfg.led_brightness = 255;
+  cfg.serial_baudrate = 115200; // Set serial baud rate
+  cfg.clear_display = true;     // Clear the screen on begin
+  cfg.output_power = true;      // Use external port 5V output
+  cfg.internal_imu = true;      // Use internal IMU
+  cfg.internal_rtc = true;      // Use internal RTC
+  cfg.internal_spk = true;      // Use internal speaker
+  cfg.internal_mic = true;      // Use internal microphone
+  cfg.led_brightness = 255;     // Set LED brightness (0-255)
   M5.begin(cfg);
 
   pinMode(buttonPin, INPUT_PULLUP);
 
-  // Initialize Serial
-  Serial.begin(115200);
-
   // Initialize IMU
   auto imu_type = M5.Imu.getType();
   if (imu_type == m5::imu_none) {
-    Serial.println("IMU not found, stopping.");
+    M5_LOGI("IMU not found, stopping.");
     while (true) {
       delay(1);
     }
   }
   M5.Imu.init();
-  Serial.printf("IMU initialized.\n");
+  M5_LOGI("IMU initialized.\n");
 
   soundManager.begin();
 
@@ -147,9 +151,6 @@ void Application::setup() {
   displayManager.begin();
 
   setupMenu();
-
-  auto labels = menu.getAllLabels();
-  displayManager.printMenuItems(labels, menu.getCurrentIndex());
 }
 
 void Application::loop() {
@@ -166,6 +167,7 @@ void Application::loop() {
     if (millis() - menuLastInteractionTime > menuTimeout) {
       menuOpen = false;
       // Show default screen when menu closes
+      displayManager.resetPreviousValues();
       updateDefaultScreen();
     }
   } else {
@@ -188,6 +190,7 @@ void Application::loop() {
       displayManager.printMenuItems(labels, menu.getCurrentIndex());
     }
   }
+  M5.Display.display();
 }
 
 // Refactored method to handle IMU data
@@ -204,7 +207,7 @@ void Application::handleIMUData() {
       if (inCooldown) {
         if (currentTime - cooldownStartTime > arrowCooldownDuration) {
           inCooldown = false;
-          Serial.println("Cooldown ended");
+          M5_LOGI("Cooldown ended");
         }
       }
 
@@ -215,14 +218,14 @@ void Application::handleIMUData() {
           if (val[1] <= leftInitialThreshold) {
             leftInitialDetected = true;
             leftIterationCount = 0;
-            Serial.println("Left arrow: Initial threshold detected");
+            M5_LOGI("Left arrow: Initial threshold detected");
           }
         } else {
           leftIterationCount++;
           if (val[1] >= leftFinalThreshold) {
             // Trigger left arrow
             bleDevice.write(0xD8);
-            Serial.println("Left arrow triggered");
+            M5_LOGI("Left arrow triggered");
             inCooldown = true;
             cooldownStartTime = currentTime;
 
@@ -233,7 +236,7 @@ void Application::handleIMUData() {
             // Timeout
             leftInitialDetected = false;
             leftIterationCount = 0;
-            Serial.println("Left arrow: Timeout");
+            M5_LOGI("Left arrow: Timeout");
           }
         }
 
@@ -242,14 +245,14 @@ void Application::handleIMUData() {
           if (val[1] >= rightInitialThreshold) {
             rightInitialDetected = true;
             rightIterationCount = 0;
-            Serial.println("Right arrow: Initial threshold detected");
+            M5_LOGI("Right arrow: Initial threshold detected");
           }
         } else {
           rightIterationCount++;
           if (val[1] <= rightFinalThreshold) {
             // Trigger right arrow
             bleDevice.write(0xD7);
-            Serial.println("Right arrow triggered");
+            M5_LOGI("Right arrow triggered");
             inCooldown = true;
             cooldownStartTime = currentTime;
 
@@ -260,7 +263,7 @@ void Application::handleIMUData() {
             // Timeout
             rightInitialDetected = false;
             rightIterationCount = 0;
-            Serial.println("Right arrow: Timeout");
+            M5_LOGI("Right arrow: Timeout");
           }
         }
       }
@@ -285,7 +288,7 @@ void Application::handleIMUData() {
 void Application::handleConnectionEvents() {
   if (bleDevice.isConnected()) {
     if (!wasConnected) {
-      ledController.setBrightness(80);
+      ledController.setBrightness(20);
       soundManager.playSoundSequence(&connectSequence);
       wasConnected = true;
     }

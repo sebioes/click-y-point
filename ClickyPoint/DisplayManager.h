@@ -16,12 +16,24 @@ public:
     void printIMUData(float gx, float gy, float gz);
     void printMenuItems(const std::vector<std::string>& labels, size_t currentIndex);
     void showDefaultScreen(const char* timeStr, const char* modeStr, const char* batteryStr, bool btStatus);
+    void resetPreviousValues();
 
 private:
-    void setTextProperties();
     const uint16_t screenWidth;
     const uint16_t screenHeight;
     const int padding;
+
+    // Coordinates for ClipRects
+    const int timeX = 10, timeY = 15, timeW = 100, timeH = 30;
+    const int modeX = 10, modeY = 50, modeW = 140, modeH = 20;
+    const int batteryX = 140, batteryY = 10, batteryW = 100, batteryH = 25;
+    const int btX = 200, btY = 40, btW = 40, btH = 30;
+
+    // Previous values for comparison
+    std::string prevTimeStr;
+    std::string prevModeStr;
+    std::string prevBatteryStr;
+    bool prevBtStatus;
 };
 
 #endif
