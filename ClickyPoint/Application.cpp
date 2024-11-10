@@ -102,10 +102,10 @@ void Application::updateDefaultScreen() {
   int batteryLevel = M5.Power.getBatteryLevel();
   char batteryString[16];
   if (batteryLevel >= 0) {
-    snprintf(batteryString, sizeof(batteryString), "Battery: %d%%",
+    snprintf(batteryString, sizeof(batteryString), "%d%%",
              batteryLevel);
   } else {
-    snprintf(batteryString, sizeof(batteryString), "Battery N/A");
+    snprintf(batteryString, sizeof(batteryString), "N/A");
   }
 
   // Get mode
@@ -113,7 +113,7 @@ void Application::updateDefaultScreen() {
       presentationMode ? "Mode: Presentation" : "Mode: Normal";
 
   // Update display
-  displayManager.showDefaultScreen(timeString, batteryString, modeString);
+  displayManager.showDefaultScreen(timeString, modeString, batteryString, bleDevice.isConnected());
 }
 
 void Application::setup() {
