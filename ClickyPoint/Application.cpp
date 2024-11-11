@@ -20,7 +20,7 @@ const SoundSequence resetCursorSequence = {
 Application::Application()
     : bleDevice("Click y Point", "Click y Point"), presentationMode(false),
       sensitivity(35.0f), lastRotaryPosition(0),
-      rotaryHandler(rotaryClkPin, rotaryDtPin, rotarySwPin), posToggle(true),
+      encoder(rotaryClkPin, rotaryDtPin, rotarySwPin), posToggle(true),
       wasConnected(true), leftClickLastDebounceTime(0), leftClickPressed(false),
       cooldownStartTime(0), inCooldown(false), leftInitialDetected(false),
       leftIterationCount(0), rightInitialDetected(false),
@@ -40,6 +40,8 @@ void Application::setupMenu() {
   menu.addItem("Show IMU Data", [this]() { startIMUDisplay(); });
 
   menu.addItem("Power Off", [this]() { powerOffDevice(); });
+
+  encoder.setBoundaries(0,3,true);
 }
 
 void Application::togglePresentationMode() {
@@ -52,24 +54,18 @@ void Application::togglePresentationMode() {
 
 void Application::adjustSensitivity() {
   currentState = AppState::SensitivityAdjustment;
-  lastRotaryPosition = rotaryHandler.getPosition();
+  encoder.setBoundaries(10,50,false);
+  encoder.setEncoderValue(sensitivity);
   displayManager.showSensitivityScreen(sensitivity);
 }
 
 void Application::updateSensitivityAdjustment() {
-  if (rotaryHandler.hasRotated()) {
-    int32_t delta = lastRotaryPosition - rotaryHandler.getPosition();
-    lastRotaryPosition = rotaryHandler.getPosition();
-    sensitivity += delta;
-    sensitivity = std::clamp(sensitivity, 10.0f, 50.0f);
-    displayManager.showSensitivityScreen(sensitivity);
+  if (encoder.encoderChanged()) {
+    displayManager.showSensitivityScreen(encoder.getEncoderValue());
   }
 
-  if (rotaryHandler.isButtonPressed()) {
-    currentState = AppState::Menu;
-    menuLastInteractionTime = millis();
-    auto labels = menu.getAllLabels();
-    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  if (encoder.buttonPressed()) {
+    backToMenu();
   }
 }
 
@@ -85,11 +81,8 @@ void Application::updateIMUDisplay() {
     displayManager.printIMUData(val[0], val[1], val[2]);
   }
 
-  if (rotaryHandler.isButtonPressed()) {
-    currentState = AppState::Menu;
-    menuLastInteractionTime = millis();
-    auto labels = menu.getAllLabels();
-    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+  if (encoder.buttonPressed()) {
+    backToMenu();
   }
 }
 
@@ -104,14 +97,24 @@ void Application::resetCursor() {
   }
 }
 
+void Application::backToMenu() {
+    currentState = AppState::Menu;
+    encoder.setBoundaries(0,3,true);
+    encoder.setEncoderValue(0);
+    menuLastInteractionTime = millis();
+    auto labels = menu.getAllLabels();
+    displayManager.printMenuItems(labels, menu.getCurrentIndex());
+}
+
 void Application::updateMenu() {
-  if (rotaryHandler.hasRotated()) {
-    if (rotaryHandler.getPosition() < lastRotaryPosition) {
+  if (encoder.encoderChanged()) {
+    long newPos = encoder.getEncoderValue();
+    if (newPos > lastRotaryPosition) {
       menu.next();
-    } else {
+    } else if (newPos < lastRotaryPosition) {
       menu.previous();
     }
-    lastRotaryPosition = rotaryHandler.getPosition();
+    lastRotaryPosition = newPos;
 
     auto labels = menu.getAllLabels();
     displayManager.printMenuItems(labels, menu.getCurrentIndex());
@@ -119,11 +122,12 @@ void Application::updateMenu() {
     menuLastInteractionTime = millis();
   }
 
-  if (rotaryHandler.isButtonPressed()) {
+  if (encoder.buttonPressed()) {
     menu.select();
     menuLastInteractionTime = millis();
   }
 }
+
 
 void Application::updateDefaultScreen() {
   m5::rtc_datetime_t dt;
@@ -193,7 +197,9 @@ void Application::setup() {
 
   bleDevice.begin(true, true);
 
-  rotaryHandler.initialize();
+  encoder.setEncoderType(EncoderType::FLOATING);
+  encoder.setBoundaries(0, menu.size() - 1, true);
+  encoder.begin();
 
   displayManager.begin();
 
@@ -207,7 +213,7 @@ void Application::loop() {
   handleConnectionEvents();
   ledController.update();
   soundManager.update();
-  rotaryHandler.update();
+  encoder.loop();
 
   switch (currentState) {
   case AppState::Menu:
@@ -239,10 +245,10 @@ void Application::loop() {
       updateDefaultScreen();
     }
 
-    if (rotaryHandler.isButtonPressed()) {
+    if (encoder.buttonPressed()) {
       currentState = AppState::Menu;
       menuLastInteractionTime = millis();
-      lastRotaryPosition = rotaryHandler.getPosition();
+      lastRotaryPosition = encoder.getEncoderValue();
 
       auto labels = menu.getAllLabels();
       displayManager.printMenuItems(labels, menu.getCurrentIndex());

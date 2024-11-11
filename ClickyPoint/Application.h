@@ -5,8 +5,8 @@
 #include "DisplayManager.h"
 #include "LEDController.h"
 #include "Menu.h"
-#include "RotaryHandler.h"
 #include "SoundManager.h"
+#include "ESP32RotaryEncoder.h"
 
 class Application {
 public:
@@ -36,12 +36,13 @@ private:
   void startIMUDisplay();
   void updateIMUDisplay();
   void powerOffDevice();
+  void backToMenu();
 
   // Member variables
   BleDevice bleDevice;
   SoundManager soundManager;
   LEDController ledController;
-  RotaryHandler rotaryHandler;
+  RotaryEncoder encoder;
   DisplayManager displayManager;
   Menu menu;
   AppState currentState;

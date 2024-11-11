@@ -16,10 +16,10 @@
 
 #if defined(CONFIG_ARDUHAL_ESP_LOG)
   #include "esp32-hal-log.h"
-  #define LOG_TAG ""
+  #define BLE_LOG_TAG ""
 #else
   #include "esp_log.h"
-  static const char* LOG_TAG = "BLEDevice";
+  static const char* BLE_LOG_TAG = "BLEDevice";
 #endif
 
 #define BLEDevice                  NimBLEDevice

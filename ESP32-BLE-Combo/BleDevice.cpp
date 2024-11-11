@@ -79,7 +79,7 @@ void BleDevice::begin(bool _enableMouse, bool _enableKeyboard)
 		hid->setBatteryLevel(batteryLevel);
 	// hid_mouse->setBatteryLevel(batteryLevel);
 
-	ESP_LOGD(LOG_TAG, "Advertising started!");
+	ESP_LOGD(BLE_LOG_TAG, "Advertising started!");
 	// vTaskDelay(portMAX_DELAY); //delay(portMAX_DELAY);
 }
 
@@ -410,11 +410,11 @@ void BleDevice::onConnect(BLEServer* pServer) {
 
 	// }
 
-	// ESP_LOGD(LOG_TAG, "Connected to: %d",peer.getAddress());
-	// ESP_LOGD(LOG_TAG, "latency %d ms",peer.getConnLatency());
+	// ESP_LOGD(BLE_LOG_TAG, "Connected to: %d",peer.getAddress());
+	// ESP_LOGD(BLE_LOG_TAG, "latency %d ms",peer.getConnLatency());
 	// if(this->connected == 0){
 		// BLEDevice::addIgnored(peer.getAddress());
-	// ESP_LOGD(LOG_TAG, "Subscribed to Mouse: %d",inputMouse->getSubscribedCount());
+	// ESP_LOGD(BLE_LOG_TAG, "Subscribed to Mouse: %d",inputMouse->getSubscribedCount());
 		// inputMouse->setSubscribe(); //add or remove machine that connected 
 	// }
 	
@@ -435,7 +435,7 @@ void BleDevice::onWrite(BLECharacteristic* me) {
 	uint8_t* value = (uint8_t*)(me->getValue().c_str());
 	(void)value;
 	_keyboardLedsStatus = *value;
-	ESP_LOGI(LOG_TAG, "special keys: %d", *value);
+	ESP_LOGI(BLE_LOG_TAG, "special keys: %d", *value);
 }
 
 void BleDevice::delay_ms(uint64_t ms) {
